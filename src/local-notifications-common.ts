@@ -181,6 +181,11 @@ export interface ScheduleOptions {
   priority?: number;
 
   /**
+   * Android only: Set to 1 if alarms should wake up the device in Doze mode (API >= 23)
+   */
+  alertWhileIdle?: number;
+
+  /**
    * Buttons or text input.
    */
   actions?: Array<NotificationAction>;

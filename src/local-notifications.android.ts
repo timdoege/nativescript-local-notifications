@@ -71,7 +71,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
     alarmManager.cancel(pendingIntent);
     const notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
     notificationManager.cancel(id);
-
+    console.log('local-notifications.android - cancelById ', id);
     com.telerik.localnotifications.Store.remove(context, id);
   }
 
