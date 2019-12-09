@@ -25,6 +25,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
   @Override
   public void onReceive(Context context, Intent intent) {
     if (context == null || !Intent.ACTION_BOOT_COMPLETED.equalsIgnoreCase(intent.getAction())) {
+      Log.i("SQDK NotifRestoreRec", "onReceive, no context ("+(context==null)+ ") or not reboot");
       return;
     }
 
@@ -48,14 +49,18 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     // If no ID is provided, we automatically assign different IDs so that all notifications are persisted:
     final int notificationID = options.optInt("id", 0);
     final long triggerTime = options.optLong("atTime", 0);
+    final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
 
     if (triggerTime == 0) {
       // If we just want to show the notification immediately, there's no need to create an Intent,
       // we just send the notification to the Notification Service:
+
+      Log.i("SQDK NotifRestoreRec", "scheduleNotification, triggerTime=0 for notificationId "+notificationID);
+
       ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).notify(
           notificationID, com.telerik.localnotifications.Builder.build(options, context, notificationID)
       );
-
+      Log.i("SQDK NotifRestoreRec", "scheduleNotification, done calling NOTIFY for notificationId "+notificationID);
       return;
     }
 
@@ -65,8 +70,8 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     final Date triggerDate = new Date(triggerTime);
 
     if (interval == 0 && new Date().after(triggerDate)) {
+      Log.i("SQDK NotifRestoreRec", "scheduleNotification, REMOVE "+notificationID+", interval="+interval+", triggerDate="+triggerDate);
       Store.remove(context, notificationID);
-
       return;
     }
 
@@ -80,11 +85,25 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
           .putExtra(Builder.NOTIFICATION_ID, notificationID);
 
       final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+      Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" for later, interval="+interval+", triggerDate="+triggerDate);
 
       if (interval > 0) {
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, triggerTime, interval, pendingIntent);
+        if (alertWhileIdle) {
+          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" (repeat) excact and distruptive, triggerDate="+triggerDate);
+          alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+        }
+        else {
+          alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, triggerTime, interval, pendingIntent);
+        }
+
       } else {
-        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+        if (alertWhileIdle) {
+          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" excact and distruptive, triggerDate="+triggerDate);
+          alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+        }
+        else {
+          alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+        }
       }
     } catch (Exception e) {
       Log.e(TAG, "Notification could not be scheduled!" + e.getMessage(), e);

@@ -86,6 +86,7 @@ public class NotificationActionReceiver extends IntentService {
       ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(id);
 
       // And also unpersist it:
+      Log.i("SQDK NotifActReceiver", "onClick, id "+id+" Store.remove");
       Store.remove(context, id);
     }
   }

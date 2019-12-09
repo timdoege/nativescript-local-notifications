@@ -25,6 +25,8 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
     // Create the notification:
 
     try {
+      Log.i("SQDK NotifAlarmReceiver", "onReceive, id "+id+" NOTIFY");
+
       ((NotificationManager) context
         .getSystemService(Context.NOTIFICATION_SERVICE))
         .notify(id, Builder.build(opts, context, id));

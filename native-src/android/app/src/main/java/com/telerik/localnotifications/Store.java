@@ -51,10 +51,12 @@ public final class Store {
     }
 
     public static void save(Context context, int id, JSONObject opts) {
+        Log.i("SQDK LocalNotPlg", "Save id "+id+" called");
         context.getSharedPreferences(SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE).edit().putString(String.valueOf(id), opts.toString()).apply();
     }
 
     public static void remove(Context context, int id) {
+        Log.i("SQDK LocalNotPlg", "Remove id "+id+" called");
         context.getSharedPreferences(SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE).edit().remove(String.valueOf(id)).apply();
     }
 }
