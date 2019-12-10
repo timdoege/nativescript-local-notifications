@@ -45,8 +45,8 @@ public class NotificationActionReceiver extends IntentService {
 
     try {
       onClick(intent.getAction(), bundle);
-    } catch (JSONException e) {
-      Log.e(TAG, e.getMessage(), e);
+    } catch (Throwable e) {
+      Log.e(TAG, "onClick error: "+e.getMessage(), e);
     }
   }
 
@@ -55,6 +55,10 @@ public class NotificationActionReceiver extends IntentService {
 
     // Note that for the non-default action this will be empty:
     final JSONObject opts = Store.get(context, bundle.getInt(Builder.NOTIFICATION_ID), false);
+    if (opts == null) {
+      Log.e(TAG, "onClick error - no options found in Store for notification id "+bundle.getInt(Builder.NOTIFICATION_ID));
+      return;
+    }
 
     boolean isAppActive = LocalNotificationsPlugin.isActive;
     boolean doLaunch = intent.getBooleanExtra("NOTIFICATION_LAUNCH", true);
@@ -79,16 +83,27 @@ public class NotificationActionReceiver extends IntentService {
 
     LocalNotificationsPlugin.executeOnMessageReceivedCallback(opts);
 
-    if (opts.has("id") && !opts.optBoolean("ongoing", false)) {
+    if (opts.has("id")) {
       int id = opts.getInt("id");
+      final long interval = opts.optLong("repeatInterval", 0); // in ms
 
       // Clear the notification from the tray, unless it's marker as ongoing/sticky:
-      ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(id);
+      if (!opts.optBoolean("ongoing", false)) {
+        ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(id);
 
-      // And also unpersist it:
-      Log.i("SQDK NotifActReceiver", "onClick, id "+id+" Store.remove");
-      Store.remove(context, id);
+        // And also unpersist it unless it's a repeating notification
+        if (interval == 0) {
+          Log.i("SQDK NotifActReceiver", "onClick, non-recurring id "+id+" Store.remove");
+          Store.remove(context, id);
+        }
+      }
+      // Handle repeating notifications
+      if (interval > 0) {
+        NotificationRestoreReceiver.handleRepeatingScheduleOnActionOrClear(opts, context, id);
+      }
     }
+
+
   }
 
   private boolean setTextInput(String action, JSONObject data) throws JSONException {

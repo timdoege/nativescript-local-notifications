@@ -28,36 +28,27 @@ public class NotificationClearedReceiver extends BroadcastReceiver {
     // Default value not used as above check ensures we have an actual value:
     final int id = intent.getIntExtra(Builder.NOTIFICATION_ID, 0);
     final JSONObject opts = Store.get(context, id);
-    final boolean alertWhileIdle = opts.optInt("alertWhileIdle", 0) == 1;
-    Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+", alertWhileIdle="+alertWhileIdle);
+    Log.i("SQDK NotifClearReceiver", "onReceive, id "+id);
 
-    if (opts != null) {
-      if (opts.optInt("repeatInterval", 0) == 0) {
-        Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+", no repeat, removing from Store");
-        // Remove the persisted notification data if it's not repeating:
-        Store.remove(context, id);
-        Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+" done removing from Store");
-      }
-      else {
-        // If a repeating alarm is also has "alertWhileIdle" we need to manually schedule the next alarm
-        // since there is no setExactAndAllowWhileIdleRepeating method and the Android docs explicitly state
-        // that this is the way to solve this
-        if (alertWhileIdle) {
-          try {
-            Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+" (alertWhileIdle), has repeat - re-scheduling");
-            NotificationRestoreReceiver.scheduleNotification(opts, context);
-          } catch (Exception e) {
-            Log.e(TAG, "Notification "+id+" (alertWhileIdle) could not be (re-)scheduled!" + e.getMessage(), e);
-          }
+    try {
+      if (opts != null) {
+        // In case we clear a non-recurring notification, we remove it
+        if (opts.optInt("repeatInterval", 0) == 0) {
+          Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+", no repeat, removing from Store");
+          // Remove the persisted notification data if it's not repeating:
+          Store.remove(context, id);
         }
         else {
-          Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+" (non alertWhileIdle), has repeat, not removing");
+          NotificationRestoreReceiver.handleRepeatingScheduleOnActionOrClear(opts, context, id);
         }
+        LocalNotificationsPlugin.executeOnMessageClearedCallback(opts);
       }
-      LocalNotificationsPlugin.executeOnMessageClearedCallback(opts);
+      else {
+        Log.e("SQDK NotifClearReceiver", "onReceive, id "+id+", no opts");
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "Notification "+id+" could not be (re-)scheduled!" + e.getMessage(), e);
     }
-    else {
-      Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+", no opts");
-    }
+
   }
 }

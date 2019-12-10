@@ -25,7 +25,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
   @Override
   public void onReceive(Context context, Intent intent) {
     if (context == null || !Intent.ACTION_BOOT_COMPLETED.equalsIgnoreCase(intent.getAction())) {
-      Log.i("SQDK NotifRestoreRec", "onReceive, no context ("+(context==null)+ ") or not reboot");
+      // Log.i("SQDK NotifRestoreRec", "onReceive, no context ("+(context==null)+ ") or not reboot");
       return;
     }
 
@@ -37,12 +37,42 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
 
         scheduleNotification(new JSONObject(notificationString), context);
       }
-    } catch (IllegalStateException | JSONException e) {
+    } catch (Throwable e) {
       Log.e(TAG, "Notification could not be scheduled! " + e.getMessage(), e);
     }
   }
 
+  /**
+   * Ensure repeating notifications using alertWhileIdle (waking up in Doze mode) are rescheduled
+   * manually since they can not be set as repeating
+   *
+   * @param options
+   * @param context
+   * @param id Notification id
+   *
+   */
+  static void handleRepeatingScheduleOnActionOrClear(JSONObject options, Context context, int id) {
+    final long interval = options.optLong("repeatInterval", 0); // in ms
+    final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
+
+    // If a repeating alarm is also has "alertWhileIdle" we need to manually schedule the next alarm
+    // since there is no setExactAndAllowWhileIdleRepeating method and the Android docs explicitly state
+    // that this is the way to solve this
+    if (alertWhileIdle) {
+      Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+" (alertWhileIdle), has repeat - re-scheduling");
+      scheduleNotification(options, context, true);
+    }
+    else {
+      Log.i("SQDK NotifClearReceiver", "onReceive, id "+id+" (non alertWhileIdle), has repeat, not removing");
+    }
+
+  }
+
   static void scheduleNotification(JSONObject options, Context context) {
+    scheduleNotification(options, context, false);
+  }
+
+  static void scheduleNotification(JSONObject options, Context context, boolean skipImmediateNotifcations) {
 
     // We might create the notification IMMEDIATELY:
 
@@ -51,7 +81,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     final long triggerTime = options.optLong("atTime", 0);
     final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
 
-    if (triggerTime == 0) {
+    if (triggerTime == 0 && !skipImmediateNotifcations) {
       // If we just want to show the notification immediately, there's no need to create an Intent,
       // we just send the notification to the Notification Service:
 
@@ -89,24 +119,27 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
 
       if (interval > 0) {
         if (alertWhileIdle) {
-          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" (repeat) excact and distruptive, triggerDate="+triggerDate);
-          alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+          // Calculate the next trigger time based on the interval
+          long nextTriggerTime = triggerTime + interval;
+          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" (repeat) excact and distruptive, next trigger date="+new Date(nextTriggerTime));
+          alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextTriggerTime, pendingIntent);
         }
         else {
           alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, triggerTime, interval, pendingIntent);
         }
 
       } else {
+        // We know at this point that the trigger date has not been reached yet
         if (alertWhileIdle) {
-          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" excact and distruptive, triggerDate="+triggerDate);
+          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" (none-repeating) excact and distruptive, triggerDate="+triggerDate);
           alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
         }
         else {
           alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
         }
       }
-    } catch (Exception e) {
-      Log.e(TAG, "Notification could not be scheduled!" + e.getMessage(), e);
+    } catch (Throwable e) {
+      Log.e(TAG, "Notification "+notificationID+" could not be scheduled!" + e.getMessage(), e);
     }
   }
 }

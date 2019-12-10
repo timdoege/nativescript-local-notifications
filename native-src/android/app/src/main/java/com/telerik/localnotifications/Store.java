@@ -23,7 +23,7 @@ public final class Store {
             return new JSONObject(context
                 .getSharedPreferences(SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
                 .getString(String.valueOf(id), ""));
-        } catch (JSONException e) {
+        } catch (Throwable e) {
             Log.e(TAG, "Error parsing options" + e.getMessage(), e);
         }
 
@@ -45,7 +45,7 @@ public final class Store {
     public static void save(Context context, int id, String opts) {
         try {
             save(context, id, new JSONObject(opts));
-        } catch (JSONException e) {
+        } catch (Throwable e) {
             Log.e(TAG, "Error saving options" + e.getMessage(), e);
         }
     }
