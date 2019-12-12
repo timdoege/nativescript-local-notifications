@@ -62,6 +62,7 @@ public class NotificationActionReceiver extends IntentService {
 
     boolean isAppActive = LocalNotificationsPlugin.isActive;
     boolean doLaunch = intent.getBooleanExtra("NOTIFICATION_LAUNCH", true);
+    Log.i("SQDK ActRec", "onClick !");
 
     Log.d(TAG, "doLaunch = " + doLaunch);
 

@@ -27,8 +27,8 @@ public class NotificationClearedReceiver extends BroadcastReceiver {
 
     // Default value not used as above check ensures we have an actual value:
     final int id = intent.getIntExtra(Builder.NOTIFICATION_ID, 0);
-    final JSONObject opts = Store.get(context, id);
     Log.i("SQDK NotifClearReceiver", "onReceive, id "+id);
+    final JSONObject opts = Store.get(context, id);
 
     try {
       if (opts != null) {
@@ -39,6 +39,8 @@ public class NotificationClearedReceiver extends BroadcastReceiver {
           Store.remove(context, id);
         }
         else {
+          Log.i("SQDK NotifClearReceiver", "onReceive, repeating id "+id);
+
           NotificationRestoreReceiver.handleRepeatingScheduleOnActionOrClear(opts, context, id);
         }
         LocalNotificationsPlugin.executeOnMessageClearedCallback(opts);
