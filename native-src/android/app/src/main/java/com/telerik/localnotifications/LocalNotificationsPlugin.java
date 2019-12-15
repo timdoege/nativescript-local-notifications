@@ -34,15 +34,12 @@ public class LocalNotificationsPlugin {
    * @param data
    */
   public static void executeOnMessageReceivedCallback(JSONObject data) {
-    Log.i("SQDK LocPlugin", "LocalNotificationsPlugin - executeOnMessageReceivedCallback");
     if (onMessageReceivedCallback != null) {
       Log.d(TAG, "Sending message to client");
-      Log.i("SQDK LocPlugin", "LocalNotificationsPlugin - sending msg to client");
 
       onMessageReceivedCallback.success(data);
     } else {
       Log.d(TAG, "No callback function - caching the data for later retrieval.");
-      Log.i("SQDK LocPlugin", "LocalNotificationsPlugin - not sending msg to client");
       cachedData = data;
     }
   }
@@ -63,14 +60,12 @@ public class LocalNotificationsPlugin {
    * @param data
    */
   public static void executeOnMessageClearedCallback(JSONObject data) {
-    Log.i("SQDK LocPlugin", "LocalNotificationsPlugin - executeOnMessageClearedCallback");
     if (onMessageClearedCallback != null) {
       onMessageClearedCallback.success(data);
     }
   }
 
   public static void scheduleNotification(JSONObject options, Context context) throws Exception {
-    Log.i("SQDK LocPlugin", "LocalNotificationsPlugin - scheduleNotification");
     // Persist the options so that we can access them later to:
     // - Restore a notification after reboot.
     // - Create a notification after an alarm triggers (for recurrent or scheduled notifications).

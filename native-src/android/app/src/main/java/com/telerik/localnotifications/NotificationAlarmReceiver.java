@@ -18,15 +18,12 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
 
     if (opts == null) {
       Log.e(TAG, "Notification could not be created, options are null");
-
       return;
     }
 
     // Create the notification:
 
     try {
-      Log.i("SQDK NotifAlarmReceiver", "onReceive, id "+id+" NOTIFY");
-
       ((NotificationManager) context
         .getSystemService(Context.NOTIFICATION_SERVICE))
         .notify(id, Builder.build(opts, context, id));

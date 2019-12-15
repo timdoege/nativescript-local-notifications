@@ -62,7 +62,6 @@ public class NotificationActionReceiver extends IntentService {
 
     boolean isAppActive = LocalNotificationsPlugin.isActive;
     boolean doLaunch = intent.getBooleanExtra("NOTIFICATION_LAUNCH", true);
-    Log.i("SQDK ActRec", "onClick !");
 
     Log.d(TAG, "doLaunch = " + doLaunch);
 
@@ -94,7 +93,6 @@ public class NotificationActionReceiver extends IntentService {
 
         // And also unpersist it unless it's a repeating notification
         if (interval == 0) {
-          Log.i("SQDK NotifActReceiver", "onClick, non-recurring id "+id+" Store.remove");
           Store.remove(context, id);
         }
       }

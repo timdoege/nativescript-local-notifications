@@ -25,10 +25,8 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
   @Override
   public void onReceive(Context context, Intent intent) {
     if (context == null || !Intent.ACTION_BOOT_COMPLETED.equalsIgnoreCase(intent.getAction())) {
-      // Log.i("SQDK NotifRestoreRec", "onReceive, no context ("+(context==null)+ ") or not reboot");
       return;
     }
-    Log.i("SQDK NotifRestoreRec", "onReceive - rescheduling");
 
     try {
       for (Map.Entry<String, String> entry : Store.getAll(context).entrySet()) {
@@ -60,11 +58,10 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     // since there is no setExactAndAllowWhileIdleRepeating method and the Android docs explicitly state
     // that this is the way to solve this
     if (alertWhileIdle) {
-      Log.i("SQDK NotifClearReceiver", "handleRepeatingScheduleOnActionOrClear, id "+id+" (alertWhileIdle), has repeat - re-scheduling");
       scheduleNotification(options, context, true);
     }
     else {
-      Log.i("SQDK NotifClearReceiver", "handleRepeatingScheduleOnActionOrClear, id "+id+" (non alertWhileIdle), has repeat, not removing");
+      // Log.c(TAG, "handleRepeatingScheduleOnActionOrClear, id "+id+" (non alertWhileIdle), has repeat, not removing");
     }
 
   }
@@ -81,18 +78,14 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     final int notificationID = options.optInt("id", 0);
     final long triggerTime = options.optLong("atTime", 0);
     final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
-    Log.i("SQDK NotifRestoreRec", "scheduleNotification CALLED, triggerTime="+triggerTime+" for notificationId "+notificationID);
 
     if (triggerTime == 0 && !skipImmediateNotifcations) {
       // If we just want to show the notification immediately, there's no need to create an Intent,
       // we just send the notification to the Notification Service:
 
-      Log.i("SQDK NotifRestoreRec", "scheduleNotification, triggerTime=0 for notificationId "+notificationID);
-
       ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).notify(
           notificationID, com.telerik.localnotifications.Builder.build(options, context, notificationID)
       );
-      Log.i("SQDK NotifRestoreRec", "scheduleNotification, done calling NOTIFY for notificationId "+notificationID);
       return;
     }
 
@@ -100,9 +93,9 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
 
     final long interval = options.optLong("repeatInterval", 0); // in ms
     final Date triggerDate = new Date(triggerTime);
-    final Date now = new Date();
+    final long nowMillis = System.currentTimeMillis();
+    final Date now = new Date(nowMillis);
     if (interval == 0 && now.after(triggerDate)) {
-      Log.i("SQDK NotifRestoreRec", "scheduleNotification, REMOVE "+notificationID+", interval="+interval+", triggerDate="+triggerDate);
       Store.remove(context, notificationID);
       return;
     }
@@ -116,17 +109,16 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
           .setAction(options.getString("id"))
           .putExtra(Builder.NOTIFICATION_ID, notificationID);
 
-      Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" for later, interval="+interval+", triggerDate="+triggerDate);
-
       if (interval > 0) {
         if (alertWhileIdle) {
           // Calculate the next trigger time based on the interval
-          long nextTriggerTime = triggerTime;
-          if (now.after(triggerDate)) {
-            nextTriggerTime = triggerTime + interval;
-          }
-          final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" (repeat) excact and distruptive, next trigger date="+new Date(nextTriggerTime));
+          // Note that we at this point don't know how many alarm occurrences we may have missed and hence need to add the timer interval to the scheduled
+          // alarm time until we reach a point ahead in time (ie. the user clears or activates a daily repeating notification 2 days later)
+          // If the trigger date is in the past, we set up the next instance to be x + 1 times the interval from the trigger date
+          long multiplier = (nowMillis - triggerTime) / interval;
+          long nextTriggerTime = (multiplier + 1) * interval + triggerTime;
+
+          final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
           alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextTriggerTime, pendingIntent);
         }
         else {
@@ -137,8 +129,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
       } else {
         // We know at this point that the trigger date has not been reached yet
         if (alertWhileIdle) {
-          Log.i("SQDK NotifRestoreRec", "scheduleNotification, Schedule "+notificationID+" (none-repeating) exact and distruptive, triggerDate="+triggerDate);
-          final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+          final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
           alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
         }
         else {
