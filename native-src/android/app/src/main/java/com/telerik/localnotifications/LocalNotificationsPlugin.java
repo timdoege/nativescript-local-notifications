@@ -7,7 +7,6 @@ import org.json.JSONObject;
 
 public class LocalNotificationsPlugin {
   static final String TAG = "LocalNotifyPlugin";
-
   static boolean isActive = false;
   private static JSONObject cachedData;
   private static LocalNotificationsPluginListener onMessageReceivedCallback;

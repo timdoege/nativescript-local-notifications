@@ -87,7 +87,8 @@ public class NotificationActionReceiver extends IntentService {
       int id = opts.getInt("id");
       final long interval = opts.optLong("repeatInterval", 0); // in ms
 
-      // Clear the notification from the tray, unless it's marker as ongoing/sticky:
+      // Clear the notification from the tray, unless it's marker as ongoing/sticky
+      // if (opts.has("id") && !opts.optBoolean("ongoing", false) && opts.optInt("repeatInterval", 0) == 0)
       if (!opts.optBoolean("ongoing", false)) {
         ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(id);
 
