@@ -27,9 +27,12 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     if (context == null || !Intent.ACTION_BOOT_COMPLETED.equalsIgnoreCase(intent.getAction())) {
       return;
     }
-    Map<String,String> alarmsFiredMap = Store.getAlarmsFiredMap(context);
-    Log.i(TAG, "Alarm fired map: " + alarmsFiredMap);
 
+    Map<String,String> alarmsFiredMap = Store.getAlarmsFiredMap(context);
+    /*
+    Log.d(TAG, "Restore CTX1 Alarm fired map: " + alarmsFiredMap);
+    Log.d(TAG, "Restore CTX2 Alarm fired map: " + Store.getAlarmsFiredMap(context.getApplicationContext()));
+    */
     // Process all notifications for rescheduling
     // and showing notifications if they have fired while the device was offline
     final Map<String,String> storeContentMap = Store.getAll(context);
@@ -38,7 +41,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
         // Re-schedule notification
         final String notificationString = storeContentMap.get(key);
         if (notificationString != null) {
-          Log.e(TAG, "Process previously scheduled notification: " + notificationString);
+          Log.i(TAG, "Process previously scheduled notification: " + notificationString);
           JSONObject json = new JSONObject(notificationString);
           scheduleNotification(json, context, alarmsFiredMap, false);
         }
@@ -105,39 +108,39 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
       boolean doSendNotification = false;
       // Check if the trigger time is in the past - otherwise it will be handled later
       if (triggerTime <= nowMillis) {
-        Log.i(TAG, "Alarm "+ notificationID+" has trigger time in the past, interval "+interval);
+        Log.d(TAG, "Alarm "+ notificationID+" has trigger time in the past, interval "+interval);
 
-        // Trigger time is in the past - for repeating notifications we need to check when the last alarm was fired
+        // Trigger time is in the past - for repeating - and non-repeating - notifications we need to check when the last alarm was fired
         // as we only store the initial trigger time (atTime)
-        if (interval > 0) {
-          // Check when the alarm was last fired
-          long lastFiredTs = -1;
-          if (alarmsFiredMap != null) {
-            String lastFiredTsStr = alarmsFiredMap.get(Integer.toString(notificationID));
-            if (lastFiredTsStr != null) {
-              try {
-                lastFiredTs = Long.parseLong(lastFiredTsStr);
-                Log.i(TAG, "Alarm "+ notificationID+" - last fired found "+lastFiredTs);
+        // Check when the alarm was last fired
+        long lastFiredTs = -1;
+        if (alarmsFiredMap != null) {
+          String lastFiredTsStr = alarmsFiredMap.get(Integer.toString(notificationID));
+          if (lastFiredTsStr != null) {
+            try {
+              lastFiredTs = Long.parseLong(lastFiredTsStr);
+              Log.d(TAG, "Alarm "+ notificationID+" - last fired found "+lastFiredTs);
 
-              } catch (NumberFormatException e) {
-                Log.e(TAG, "Notification "+notificationID+" - unable to parse last fired timestamp." + e.getMessage(), e);
-              }
+            } catch (NumberFormatException e) {
+              Log.e(TAG, "Notification "+notificationID+" - unable to parse last fired timestamp." + e.getMessage(), e);
             }
           }
-          if (lastFiredTs < 0) {
-            Log.i(TAG, "No alarm fired info found for notification "+notificationID);
-          }
-          // Determine if the last fired timestamp plus the interval is in the past - if so, we missed this notification and show it now
-          doSendNotification = lastFiredTs + interval < nowMillis;
+        }
+        if (lastFiredTs < 0) {
+          Log.d(TAG, "No alarm fired info found for notification "+notificationID);
+        }
+        if (interval > 0) {
+          // Determine if the last fired timestamp has not been set yet or if the last fired timestamp
+          // plus the interval is in the past - if so, we missed this notification and show it now
+          doSendNotification = lastFiredTs < 0 || lastFiredTs + interval < nowMillis;
         }
         else {
-          Log.i(TAG, "Alarm "+ notificationID+" - is non-repeating and has trigger time in the past");
-          // Trigger time for a non-repeating notification is in the past - show it now
-          doSendNotification = true;
+          // For non-repeating alarms we just check if it should have been fired but has not (or was not recorded as fired)
+          doSendNotification = lastFiredTs < 0;
         }
       }
 
-      Log.i(TAG, "Alarm "+ notificationID+" - showNotification="+doSendNotification);
+      Log.d(TAG, "Alarm "+ notificationID+" - showNotification="+doSendNotification);
       if (doSendNotification) {
         ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).notify(
                 notificationID, com.telerik.localnotifications.Builder.build(options, context, notificationID)

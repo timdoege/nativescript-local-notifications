@@ -5,6 +5,8 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
+import java.util.Map;
+
 public class LocalNotificationsPlugin {
   static final String TAG = "LocalNotifyPlugin";
   static boolean isActive = false;
@@ -79,6 +81,9 @@ public class LocalNotificationsPlugin {
     // intents but the alarm one, which would be cancelled and rescheduled.
 
     NotificationRestoreReceiver.scheduleNotification(options, context);
+
+    // Log.d(TAG, "NEW notification added - ADA Alarm fired map: " + Store.getAlarmsFiredMap(context));
+
   }
 }
 

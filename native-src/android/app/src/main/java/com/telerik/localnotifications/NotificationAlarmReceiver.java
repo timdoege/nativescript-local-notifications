@@ -8,20 +8,35 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
+import java.util.Map;
+
 public class NotificationAlarmReceiver extends BroadcastReceiver {
 
   private static final String TAG = "NotificationAlarmRcvr";
 
   public void onReceive(Context context, Intent intent) {
     final int id = intent.getIntExtra(Builder.NOTIFICATION_ID, 0);
-    final JSONObject opts = Store.get(context, id);
+    final JSONObject opts = Store.get(context.getApplicationContext(), id);
 
     if (opts == null) {
       Log.e(TAG, "Notification could not be created, options are null");
       return;
     }
+
+    /*
+    Log.i(TAG, "Receive Ctx " + context);
+    Log.i(TAG, "Receive Ctx2 " + context.getApplicationContext());
+
+    Log.i(TAG, "Receive CTX1 notification map: " + Store.getAll(context));
+    Log.i(TAG, "Receive CTX2 notification map: " + Store.getAll(context.getApplicationContext()));
+    */
     // Register timestamp of this alarm being fired
-    Store.registerAlarmFired(context, id);
+    Store.registerAlarmFired(context.getApplicationContext(), id);
+
+    /*
+    Log.i(TAG, "Receive CTX1 Alarm fired map: " + Store.getAlarmsFiredMap(context));
+    Log.i(TAG, "Receive CTX2 Alarm fired map: " + Store.getAlarmsFiredMap(context.getApplicationContext()));
+    */
 
     // Create the notification:
     try {

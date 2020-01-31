@@ -24,6 +24,17 @@ public class NotificationClearedReceiver extends BroadcastReceiver {
       return;
     }
 
+    /*
+    Log.i(TAG, "Cancel Ctx " + context);
+    Log.i(TAG, "Cancel Ctx2 " + context.getApplicationContext());
+
+    Log.i(TAG, "Cancel CTX1 notification map: " + Store.getAll(context));
+    Log.i(TAG, "Cancel CTX2 notification map: " + Store.getAll(context.getApplicationContext()));
+
+    Log.i(TAG, "Cancel CTX1 Alarm fired map: " + Store.getAlarmsFiredMap(context));
+    Log.i(TAG, "Cancel CTX2 Alarm fired map: " + Store.getAlarmsFiredMap(context.getApplicationContext()));
+    */
+
     // Default value not used as above check ensures we have an actual value:
     final int id = intent.getIntExtra(Builder.NOTIFICATION_ID, 0);
     final JSONObject opts = Store.get(context, id);
