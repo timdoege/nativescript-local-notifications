@@ -1,4 +1,4 @@
-import { Color } from "tns-core-modules/color/color";
+import { Color } from "@nativescript/core";
 
 export type ScheduleInterval = "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
 

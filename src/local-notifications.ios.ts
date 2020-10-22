@@ -1,6 +1,6 @@
-import { DelegateObserver, SharedNotificationDelegate } from "nativescript-shared-notification-delegate";
-import * as fileSystemModule from "tns-core-modules/file-system";
-import { fromUrl } from "tns-core-modules/image-source";
+import { DelegateObserver, SharedNotificationDelegate } from "@nativescript/shared-notification-delegate";
+import { File, knownFolders, path } from "@nativescript/core";
+import { ImageSource } from '@nativescript/core';
 import { LocalNotificationsApi, LocalNotificationsCommon, ReceivedNotification, ScheduleInterval, ScheduleOptions } from "./local-notifications-common";
 
 declare const Notification: any;
@@ -203,19 +203,19 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
             UNNotificationRequest.requestWithIdentifierContentTrigger("" + options.id, content, trigger),
             (error: NSError) => error ? console.log(`Error scheduling notification (id ${options.id}): ${error.localizedDescription}`) : null);
       } else {
-        fromUrl(options.image).then(image => {
+        ImageSource.fromUrl(options.image).then(image => {
           const [imageName, imageNameWithExtension] = LocalNotificationsImpl.getImageName(options.image, "png");
-          const path: string = fileSystemModule.path.join(
-              fileSystemModule.knownFolders.temp().path,
+          const iPath: string = path.join(
+              knownFolders.temp().path,
               imageNameWithExtension,
           );
-          const saved = image.saveToFile(path, "png");
-          if (saved || fileSystemModule.File.exists(path)) {
+          const saved = image.saveToFile(iPath, "png");
+          if (saved || File.exists(iPath)) {
             try {
               content.attachments = NSArray.arrayWithObject<UNNotificationAttachment>(
                   UNNotificationAttachment.attachmentWithIdentifierURLOptionsError(
                       imageName,
-                      NSURL.fileURLWithPath(path),
+                      NSURL.fileURLWithPath(iPath),
                       null
                   ));
             } catch (err) {

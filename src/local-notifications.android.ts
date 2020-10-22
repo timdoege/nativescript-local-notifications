@@ -1,5 +1,4 @@
-import * as app from "tns-core-modules/application";
-import * as utils from "tns-core-modules/utils/utils";
+import { Application, Utils }  from "@nativescript/core";
 import {
   LocalNotificationsApi,
   LocalNotificationsCommon,
@@ -18,14 +17,14 @@ function useAndroidX () {
 
 (() => {
   const registerLifecycleEvents = () => {
-    com.telerik.localnotifications.LifecycleCallbacks.registerCallbacks(app.android.nativeApp);
+    com.telerik.localnotifications.LifecycleCallbacks.registerCallbacks(Application.android.nativeApp);
   };
 
   // Hook on the application events
-  if (app.android.nativeApp) {
+  if (Application.android.nativeApp) {
     registerLifecycleEvents();
   } else {
-    app.on(app.launchEvent, registerLifecycleEvents);
+    Application.on(Application.launchEvent, registerLifecycleEvents);
   }
 })();
 
@@ -56,15 +55,15 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
   private static getIcon(context: any /* android.content.Context */, resources: any, iconLocation?: string): string {
     const packageName: string = context.getApplicationInfo().packageName;
     return iconLocation
-        && iconLocation.indexOf(utils.RESOURCE_PREFIX) === 0
-        && resources.getIdentifier(iconLocation.substr(utils.RESOURCE_PREFIX.length), "drawable", packageName)
+        && iconLocation.indexOf(Utils.RESOURCE_PREFIX) === 0
+        && resources.getIdentifier(iconLocation.substr(Utils.RESOURCE_PREFIX.length), "drawable", packageName)
         || (LocalNotificationsImpl.IS_GTE_LOLLIPOP && resources.getIdentifier("ic_stat_notify_silhouette", "drawable", packageName))
         || resources.getIdentifier("ic_stat_notify", "drawable", packageName)
         || context.getApplicationInfo().icon;
   }
 
   private static cancelById(id: number): void {
-    const context = utils.ad.getApplicationContext();
+    const context = Utils.ad.getApplicationContext();
     const notificationIntent = new android.content.Intent(context, com.telerik.localnotifications.NotificationAlarmReceiver.class).setAction("" + id);
     const pendingIntent = android.app.PendingIntent.getBroadcast(context, 0, notificationIntent, 0);
     const alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE);
@@ -151,7 +150,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
   cancelAll(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        const context = utils.ad.getApplicationContext();
+        const context = Utils.ad.getApplicationContext();
 
         // if (android.os.Build.VERSION.SDK_INT >= 26) {
         //   const notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
@@ -160,7 +159,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
         //   console.log(">> < 26, StatusBarNotification[0]: " + new android.service.notification.StatusBarNotification[0]);
         // }
 
-        const keys: Array<string> = com.telerik.localnotifications.Store.getKeys(utils.ad.getApplicationContext());
+        const keys: Array<string> = com.telerik.localnotifications.Store.getKeys(Utils.ad.getApplicationContext());
 
         for (let i = 0; i < keys.length; i++) {
           LocalNotificationsImpl.cancelById(parseInt(keys[i]));
@@ -178,7 +177,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
   getScheduledIds(): Promise<number[]> {
     return new Promise((resolve, reject) => {
       try {
-        const keys: Array<string> = com.telerik.localnotifications.Store.getKeys(utils.ad.getApplicationContext());
+        const keys: Array<string> = com.telerik.localnotifications.Store.getKeys(Utils.ad.getApplicationContext());
 
         const ids: number[] = [];
         for (let i = 0; i < keys.length; i++) {
@@ -201,7 +200,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
           return;
         }
 
-        const context = utils.ad.getApplicationContext();
+        const context = Utils.ad.getApplicationContext();
         const resources = context.getResources();
         const scheduledIds: Array<number> = [];
 
@@ -248,7 +247,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
   }
 
   private static hasPermission(): boolean {
-    const context = utils.ad.getApplicationContext();
+    const context = Utils.ad.getApplicationContext();
     return !context || NotificationManagerCompatPackageName.NotificationManagerCompat.from(context).areNotificationsEnabled();
   }
 }
