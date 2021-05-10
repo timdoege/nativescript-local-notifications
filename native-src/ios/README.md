@@ -1,6 +1,6 @@
 # Local Notifications Plugin library for NativeScript iOS apps
 
-This is the native iOS for the Telerik NativeScript Local Notifications plugin.
+This is the native iOS for the NativeScript Local Notifications plugin.
 Not really useful for usage outside this plugin.
 
 ## Building the framework

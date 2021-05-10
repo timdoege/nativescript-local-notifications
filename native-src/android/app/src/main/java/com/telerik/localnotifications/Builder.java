@@ -7,15 +7,21 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import android.media.AudioAttributes;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 
 import static android.app.PendingIntent.FLAG_UPDATE_CURRENT;
@@ -50,6 +56,13 @@ public final class Builder {
                     channel.enableLights(true);
                     channel.setLightColor(getLedColor(options));
                 }
+								if(options.has("sound") && options.optString("sound") != "default"){
+									AudioAttributes audioAttributes = new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+										.setUsage(AudioAttributes.USAGE_NOTIFICATION)
+										.build();
+									int soundIdentifier = context.getResources().getIdentifier(options.optString("sound"), "raw", context.getApplicationInfo().packageName);
+									channel.setSound(Uri.parse("android.resource://" + context.getApplicationInfo().packageName + "/" + soundIdentifier), audioAttributes);
+								}
                 notificationManager.createNotificationChannel(channel);
             }
         }
@@ -71,10 +84,24 @@ public final class Builder {
             .setPriority(options.optInt("priority", options.optBoolean("forceShowWhenInForeground") ? 1 : 0))
             .setTicker(options.optString("ticker", null)); // Let the OS handle the default value for the ticker.
 
+				String soundFileName = options.optString("sound", null);
+				if(soundFileName != null && soundFileName != "default"){
+					int soundIdentifier = context.getResources().getIdentifier(options.optString("sound"), "raw", context.getApplicationInfo().packageName);
+					builder.setSound(Uri.parse("android.resource://" + context.getApplicationInfo().packageName + soundIdentifier));
+				}
         final Object thumbnail = options.opt("thumbnail");
 
         if (thumbnail instanceof String) {
             builder.setLargeIcon(getBitmap(context, (String) thumbnail));
+        }
+        final Object payload = options.opt("payload");
+        if (payload instanceof JSONObject) {
+					try {
+						final Bundle bundle = jsonToBundle((JSONObject) payload);
+						builder.addExtras(bundle);
+					} catch (JSONException e) {
+						Log.e(TAG, "Error parsing payload", e);
+					}
         }
 
         // TODO sound preference is not doing anything
@@ -300,4 +327,14 @@ public final class Builder {
             return DEFAULT_NOTIFICATION_COLOR;
         }
     }
+		private static Bundle jsonToBundle(JSONObject jsonObject) throws JSONException {
+			Bundle bundle = new Bundle();
+			Iterator iter = jsonObject.keys();
+			while(iter.hasNext()){
+				String key = (String)iter.next();
+				String value = jsonObject.getString(key);
+				bundle.putString(key,value);
+			}
+			return bundle;
+		}
 }

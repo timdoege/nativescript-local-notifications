@@ -5,7 +5,6 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
-import java.util.Map;
 
 public class LocalNotificationsPlugin {
   static final String TAG = "LocalNotifyPlugin";
@@ -13,7 +12,7 @@ public class LocalNotificationsPlugin {
   private static JSONObject cachedData;
   private static LocalNotificationsPluginListener onMessageReceivedCallback;
   private static LocalNotificationsPluginListener onMessageClearedCallback;
-
+  private static LocalNotificationsPluginListener onMessageClickedCallback;
   /**
    * Set the on message received callback
    *
@@ -42,6 +41,14 @@ public class LocalNotificationsPlugin {
     } else {
       Log.d(TAG, "No callback function - caching the data for later retrieval.");
       cachedData = data;
+    }
+  }
+  public static void setOnMessageClickedCallback(LocalNotificationsPluginListener callbacks) {
+    onMessageClickedCallback = callbacks;
+  }
+  public static void executeOnMessageClickedCallback(JSONObject data) {
+    if (onMessageClickedCallback != null) {
+      onMessageClickedCallback.success(data);
     }
   }
 
