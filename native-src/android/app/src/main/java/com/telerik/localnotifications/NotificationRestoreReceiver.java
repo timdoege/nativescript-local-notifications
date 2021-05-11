@@ -8,9 +8,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -68,6 +77,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
   static void handleRepeatingScheduleOnActionOrClear(JSONObject options, Context context, int id) {
     final long interval = options.optLong("repeatInterval", 0); // in ms
     final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
+    Log.d(TAG, "handleRepeatingScheduleOnActionOrClear, id "+id+" (alertWhileIdle="+alertWhileIdle+")");
 
     // If a repeating alarm is also has "alertWhileIdle" we need to manually schedule the next alarm
     // since there is no setExactAndAllowWhileIdleRepeating method and the Android docs explicitly state
@@ -76,7 +86,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
       scheduleNotification(options, context, null,true);
     }
     else {
-      // Log.c(TAG, "handleRepeatingScheduleOnActionOrClear, id "+id+" (non alertWhileIdle), has repeat, not removing");
+      Log.d(TAG, "handleRepeatingScheduleOnActionOrClear, id "+id+" (non alertWhileIdle), has repeat, not removing");
     }
 
   }
@@ -101,6 +111,9 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     final Date now = new Date(nowMillis);
     final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
     final long interval = options.optLong("repeatInterval", 0); // in ms
+    final String intervalText = options.optString("repeatIntervalText", "");
+    Log.d(TAG, "Alarm "+ notificationID+" has atTime="+triggerTime+", converted to trigger date "+triggerDate+", interval "
+            +interval+", skipImmediateNotifications="+skipImmediateNotifications+", triggerTime="+triggerTime);
 
     // In case the notification is set to alertWhileIdle, we need to check if we missed any alarms while the device was shut down
     // - this is ony relevant if the notification has a trigger time (atTime) set
@@ -174,20 +187,36 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
       final Intent notificationIntent = new Intent(context, NotificationAlarmReceiver.class)
           .setAction(options.getString("id"))
           .putExtra(Builder.NOTIFICATION_ID, notificationID);
+      Log.d(TAG, "Alarm "+ notificationID+" - interval="+interval);
 
       if (interval > 0) {
         if (alertWhileIdle) {
           long nextTriggerTime = triggerTime;
+          Log.d(TAG, "Alarm "+ notificationID+" - next trigger time="+triggerTime);
 
-          // Calculate the next trigger time based on the interval
+          // Calculate the next trigger time based on the
           // Note that we at this point don't know how many alarm occurrences we may have missed and hence need to add the timer interval to the scheduled
           // alarm time until we reach a point ahead in time (ie. the user clears or activates a daily repeating notification 2 days later)
           // If the trigger date is in the past, we set up the next instance to be x + 1 times the interval from the trigger date
           if (nextTriggerTime <= nowMillis) {
               long multiplier = (nowMillis - triggerTime) / interval;
-              nextTriggerTime = (multiplier + 1) * interval + triggerTime;
+              Calendar cal = GregorianCalendar.getInstance();
+              cal.setTimeInMillis(multiplier * interval + triggerTime);
+              if (interval < AlarmManager.INTERVAL_DAY) {
+                cal.add(Calendar.MILLISECOND, (int)interval);
+              }
+              else {
+                // Get the number of days the interval represents (max interval is 1 year, hence int cast is ok)
+                int days = (int)(interval / AlarmManager.INTERVAL_DAY);
+                cal.add(Calendar.DATE, days);
+              }
+            nextTriggerTime = cal.getTimeInMillis();
+            Log.d(TAG, "Alarm "+ notificationID+" - calculated next alertWhileIdle trigger time to millis="+nextTriggerTime+", date="+cal.getTime());
           }
           final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+          Log.d(TAG, "Alarm "+ notificationID+" - alarmManager.setExactAndAllowWhileIdle nextMillis="+nextTriggerTime+", date="+new Date(nextTriggerTime));
+
           alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextTriggerTime, pendingIntent);
         }
         else {

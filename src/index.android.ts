@@ -98,7 +98,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
 						},
 					})
 				);
-				resolve();
+				resolve(undefined);
 			} catch (ex) {
 				console.log('Error in LocalNotifications.addOnMessageReceivedCallback: ' + ex);
 				reject(ex);
@@ -117,7 +117,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
 						},
 					})
 				);
-				resolve();
+				resolve(undefined);
 			} catch (ex) {
 				console.log('Error in LocalNotifications.addOnMessageClearedCallback: ' + ex);
 				reject(ex);
@@ -206,6 +206,7 @@ export class LocalNotificationsImpl extends LocalNotificationsCommon implements 
 
 					// Used when restoring the notification after a reboot:
 					options.repeatInterval = LocalNotificationsImpl.getInterval(options.interval);
+					options.repeatIntervalText = options.interval;
 
 					if (options.color) {
 						options.color = options.color.android;

@@ -1,36 +1,25 @@
 {
-  "compilerOptions": {
-      "target": "es2017",
-      "module": "esnext",
-      "moduleResolution": "node",
-      "removeComments": true,
-      "noLib": false,
-      "emitDecoratorMetadata": false,
-      "experimentalDecorators": true,
-      "jsx": "react",
-      "lib": ["es6", "dom"],
-      "sourceMap": true,
-      "pretty": true,
-      "allowUnreachableCode": false,
-      "allowUnusedLabels": false,
-      "noEmitHelpers": true,
-      "noEmitOnError": false,
-      "noImplicitAny": false,
-      "noImplicitReturns": true,
-      "noImplicitUseStrict": true,
-      "noFallthroughCasesInSwitch": true,
-      "skipLibCheck": true,
-      "sourceRoot": "../src",
-      "baseUrl": ".",
-      "outDir": "./plugin",
-      "paths": {
-          "tns-core-modules": ["./node_modules/@nativescript/core"],
-          "tns-core-modules/*": ["./node_modules/@nativescript/core/*"],
-          "*": ["node_modules/*"]
-      },
-      "plugins": [{ "transform": "./node_modules/@nativescript/webpack/transformers/ns-transform-native-classes", "type": "raw" }]
-  },
-  "include": ["**/*.ts", "references.d.ts"],
-  "exclude": ["node_modules", "platforms", "src/angular", "demo-svelte", "demo-vue", "demo-ng", "demo-react"],
-  "compileOnSave": false
+	"compilerOptions": {
+		"rootDir": ".",
+		"sourceMap": true,
+		"declaration": true,
+		"moduleResolution": "node",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"noEmitHelpers": true,
+		"target": "es2017",
+		"module": "esnext",
+		"lib": ["es2017", "dom"],
+		"skipLibCheck": true,
+		"skipDefaultLibCheck": true,
+		"baseUrl": ".",
+		"plugins": [
+			{
+				"transform": "@nativescript/webpack/transformers/ns-transform-native-classes",
+				"type": "raw"
+			}
+		]
+	},
+	"exclude": ["node_modules", "tmp"],
+  "include": ["**/*.ts", "references.d.ts"]
 }

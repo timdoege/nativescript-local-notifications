@@ -102,6 +102,7 @@ public class NotificationActionReceiver extends IntentService {
       }
       // Handle repeating notifications
       if (interval > 0) {
+        Log.d(TAG, "onClick - call handle repeating for notification id "+id+", interval="+interval);
         NotificationRestoreReceiver.handleRepeatingScheduleOnActionOrClear(opts, context, id);
       }
     }
