@@ -116,9 +116,12 @@ public final class Store {
      * @param id
      */
     public static void remove(Context context, int id) {
+        long lastFiredBefore = getAlarmLastFiredTimestamp(context, id);
         context.getSharedPreferences(SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE).edit().remove(String.valueOf(id)).apply();
         // Also remove any alarms fired data (if any)
         context.getSharedPreferences(SHARED_PREFERENCES_ALARMS_FIRED_KEY, Context.MODE_PRIVATE).edit().remove(String.valueOf(id)).apply();
+        long lastFiredAfter = getAlarmLastFiredTimestamp(context, id);
+        Log.i(TAG, "Alarm "+id+" removed, fired at (lookup) "+lastFiredBefore+", now "+lastFiredAfter);
     }
 
     /**
@@ -130,7 +133,8 @@ public final class Store {
         String now = Long.toString(System.currentTimeMillis());
         context.getSharedPreferences(SHARED_PREFERENCES_ALARMS_FIRED_KEY, Context.MODE_PRIVATE).edit().putString(String.valueOf(id),
                 now).apply();
-        Log.i(TAG, "Alarm "+id+" registered fired at "+now);
+        long lastFired = getAlarmLastFiredTimestamp(context, id);
+        Log.i(TAG, "Alarm "+id+" registered fired at (lookup) "+lastFired);
     }
 
     /**
@@ -152,6 +156,7 @@ public final class Store {
         } catch (Throwable e) {
             Log.e(TAG, "Error parsing alarm fired timestamp" + e.getMessage(), e);
         }
+        Log.i(TAG, "getAlarmLastFiredTimestamp - Alarm "+id+" registered fired at (lookup) "+res);
         return res;
     }
 

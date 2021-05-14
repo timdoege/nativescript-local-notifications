@@ -38,10 +38,8 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     }
 
     Map<String,String> alarmsFiredMap = Store.getAlarmsFiredMap(context);
-    /*
-    Log.d(TAG, "Restore CTX1 Alarm fired map: " + alarmsFiredMap);
-    Log.d(TAG, "Restore CTX2 Alarm fired map: " + Store.getAlarmsFiredMap(context.getApplicationContext()));
-    */
+    // Log.d(TAG, "Restore CTX1 Alarm fired map: " + alarmsFiredMap);
+    // Log.d(TAG, "Restore CTX2 Alarm fired map: " + Store.getAlarmsFiredMap(context.getApplicationContext()));
     // Process all notifications for rescheduling
     // and showing notifications if they have fired while the device was offline
     final Map<String,String> storeContentMap = Store.getAll(context);
@@ -112,7 +110,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     final boolean alertWhileIdle = options.optInt("alertWhileIdle", 0) == 1;
     final long interval = options.optLong("repeatInterval", 0); // in ms
     final String intervalText = options.optString("repeatIntervalText", "");
-    Log.d(TAG, "Alarm "+ notificationID+" has atTime="+triggerTime+", converted to trigger date "+triggerDate+", interval "
+    Log.d(TAG, "scheduleNotification - Alarm "+ notificationID+" has atTime="+triggerTime+", converted to trigger date "+triggerDate+", interval "
             +interval+", skipImmediateNotifications="+skipImmediateNotifications+", triggerTime="+triggerTime);
 
     // In case the notification is set to alertWhileIdle, we need to check if we missed any alarms while the device was shut down
@@ -158,6 +156,8 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
         ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).notify(
                 notificationID, com.telerik.localnotifications.Builder.build(options, context, notificationID)
         );
+        // Also, register this alarm as fired "now" since we send the notification directly
+        Store.registerAlarmFired(context, notificationID);
       }
     }
 
@@ -168,6 +168,9 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
       ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).notify(
           notificationID, com.telerik.localnotifications.Builder.build(options, context, notificationID)
       );
+      // Also, register this alarm as fired "now" since we send the notification directly
+      Store.registerAlarmFired(context, notificationID);
+
       if (triggerTime == 0) {
         return;
       }
@@ -175,6 +178,7 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
 
     // Check if the notification has EXPIRED:
     if (interval == 0 && now.after(triggerDate)) {
+      Log.d(TAG, "Alarm "+ notificationID+" - has expired and is removed, interval="+interval);
       Store.remove(context, notificationID);
       return;
     }
@@ -187,32 +191,13 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
       final Intent notificationIntent = new Intent(context, NotificationAlarmReceiver.class)
           .setAction(options.getString("id"))
           .putExtra(Builder.NOTIFICATION_ID, notificationID);
-      Log.d(TAG, "Alarm "+ notificationID+" - interval="+interval);
+      Log.d(TAG, "Alarm "+ notificationID+" - interval="+interval+", schedule for later");
 
       if (interval > 0) {
         if (alertWhileIdle) {
-          long nextTriggerTime = triggerTime;
-          Log.d(TAG, "Alarm "+ notificationID+" - next trigger time="+triggerTime);
 
-          // Calculate the next trigger time based on the
-          // Note that we at this point don't know how many alarm occurrences we may have missed and hence need to add the timer interval to the scheduled
-          // alarm time until we reach a point ahead in time (ie. the user clears or activates a daily repeating notification 2 days later)
-          // If the trigger date is in the past, we set up the next instance to be x + 1 times the interval from the trigger date
-          if (nextTriggerTime <= nowMillis) {
-              long multiplier = (nowMillis - triggerTime) / interval;
-              Calendar cal = GregorianCalendar.getInstance();
-              cal.setTimeInMillis(multiplier * interval + triggerTime);
-              if (interval < AlarmManager.INTERVAL_DAY) {
-                cal.add(Calendar.MILLISECOND, (int)interval);
-              }
-              else {
-                // Get the number of days the interval represents (max interval is 1 year, hence int cast is ok)
-                int days = (int)(interval / AlarmManager.INTERVAL_DAY);
-                cal.add(Calendar.DATE, days);
-              }
-            nextTriggerTime = cal.getTimeInMillis();
-            Log.d(TAG, "Alarm "+ notificationID+" - calculated next alertWhileIdle trigger time to millis="+nextTriggerTime+", date="+cal.getTime());
-          }
+          long nextTriggerTime = calcNextAlertWhileIdleTriggerTime(triggerTime, interval, notificationID);
+
           final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 
           Log.d(TAG, "Alarm "+ notificationID+" - alarmManager.setExactAndAllowWhileIdle nextMillis="+nextTriggerTime+", date="+new Date(nextTriggerTime));
@@ -238,5 +223,58 @@ public class NotificationRestoreReceiver extends BroadcastReceiver {
     } catch (Throwable e) {
       Log.e(TAG, "Notification "+notificationID+" could not be scheduled!" + e.getMessage(), e);
     }
+  }
+
+  /**
+   * Calculates the next trigger time for an alertWhileIdle alarm based on the stored time and interval
+   *
+   * Note: If the interval is YEAR, the plugin does not handle leap years as it always assumes 365 days / year (in Javascript code)
+   *
+   * @param triggerTime
+   * @param interval
+   * @param notificationID
+   * @return
+   */
+  public static long calcNextAlertWhileIdleTriggerTime(long triggerTime, long interval, int notificationID) {
+    long nextTriggerTime = triggerTime;
+    Log.d(TAG, "Alarm "+ notificationID+" - calcNextTriggerTime based on trigger time="+triggerTime+", interval="+interval);
+    final long nowMillis = System.currentTimeMillis();
+
+    // Note that we at this point don't know how many alarm occurrences we may have missed and hence need to add the timer interval to the scheduled
+    // alarm time until we reach a point ahead in time (ie. the user clears or activates a daily repeating notification 2 days later)
+    // If the trigger date is in the past, we set up the next instance to be x + 1 times the interval from the trigger date
+    if (nextTriggerTime <= nowMillis) {
+      long multiplier = (nowMillis - triggerTime) / interval;
+      Calendar cal = GregorianCalendar.getInstance();
+      // Set the calendar to the initial trigger time + the number of times it has been triggered
+      cal.setTimeInMillis(multiplier * interval + triggerTime);
+      // Now, calculate how much to add to that point in time (which is before the next trigger time)
+      // Note: We need to use the Calendar's add method to take DST into account
+      // - since that only can handle Integers in the MILLISECOND field, we need to add DAYS if the interval is larger
+      if (interval < AlarmManager.INTERVAL_DAY) {
+        cal.add(Calendar.MILLISECOND, (int)interval);
+      }
+      else {
+        // Get the number of days the interval represents (max interval is 1 year, hence int cast is ok)
+        int days = (int)(interval / AlarmManager.INTERVAL_DAY);
+        cal.add(Calendar.DATE, days);
+        int rest = (int)(interval % AlarmManager.INTERVAL_DAY);
+        cal.add(Calendar.MILLISECOND, rest);
+      }
+      nextTriggerTime = cal.getTimeInMillis();
+      Log.d(TAG, "Alarm "+ notificationID+" - calculated next alertWhileIdle trigger time to millis="+nextTriggerTime+", date="+cal.getTime());
+    }
+    return nextTriggerTime;
+  }
+
+  public static void main(String[] args) {
+    long cMillis = 1620991841373L; // System.currentTimeMillis() - AlarmManager.INTERVAL_HOUR;
+    Date tt = new Date(cMillis);
+    System.out.println("Start "+cMillis+" - "+tt);
+    // long interval = 3*AlarmManager.INTERVAL_DAY+3*AlarmManager.INTERVAL_HOUR;
+    long interval = 2*365*AlarmManager.INTERVAL_DAY+3*AlarmManager.INTERVAL_HOUR;
+    long nextTrigger = calcNextAlertWhileIdleTriggerTime(cMillis, interval, 111);
+    tt = new Date(nextTrigger);
+    System.out.println("Next: "+nextTrigger+" - "+tt);
   }
 }

@@ -23,7 +23,6 @@ public class NotificationClearedReceiver extends BroadcastReceiver {
     if (intent == null || !intent.hasExtra(Builder.NOTIFICATION_ID)) {
       return;
     }
-
     /*
     Log.i(TAG, "Cancel Ctx " + context);
     Log.i(TAG, "Cancel Ctx2 " + context.getApplicationContext());

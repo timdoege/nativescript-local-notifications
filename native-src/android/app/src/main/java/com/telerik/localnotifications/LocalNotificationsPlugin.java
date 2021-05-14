@@ -88,8 +88,7 @@ public class LocalNotificationsPlugin {
     // intents but the alarm one, which would be cancelled and rescheduled.
 
     NotificationRestoreReceiver.scheduleNotification(options, context);
-
-    // Log.d(TAG, "NEW notification added - ADA Alarm fired map: " + Store.getAlarmsFiredMap(context));
+    Log.d(TAG, "scheduleNotification - NEW notification added - ADA Alarm fired map: " + Store.getAlarmsFiredMap(context));
 
   }
 }
